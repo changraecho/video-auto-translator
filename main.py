@@ -74,7 +74,7 @@ def select_languages_gui():
     root.mainloop()
 
 
-# === [2] 블러 영역 GUI 선택 ===
+# === [2] 자막 영역 GUI 선택 ===
 def select_blur_region(video_path):
     cap = cv2.VideoCapture(video_path)
     ret, frame = cap.read()
@@ -83,7 +83,7 @@ def select_blur_region(video_path):
     if not ret:
         raise Exception("영상 첫 프레임을 불러올 수 없습니다.")
 
-    roi = cv2.selectROI("블러 영역 선택 (드래그 후 Enter)", frame, showCrosshair=True)
+    roi = cv2.selectROI("자막 영역 선택 (드래그 후 Enter)", frame, showCrosshair=True)
     cv2.destroyAllWindows()
     x, y, w, h = roi
     return (x, y, x + w, y + h)
@@ -284,12 +284,11 @@ def generate_video(video_path, translations, lang, blur_region, output_dir):
                     current_text = clean_text
                 break
 
-        # 블러 처리
+        # 회색 박스 처리 (블러 대신)
         x1, y1, x2, y2 = blur_region
         if y2 > y1 and x2 > x1:  # 올바른 좌표인지 확인
-            roi = frame[y1:y2, x1:x2]
-            roi = cv2.GaussianBlur(roi, (51, 51), 0)
-            frame[y1:y2, x1:x2] = roi
+            # 회색 박스로 덮기 (RGB: 80, 80, 80 - 어두운 회색)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (80, 80, 80), -1)
 
         # 번역 텍스트 추가 - OpenCV를 사용하여 직접 렌더링
         if current_text:
@@ -355,7 +354,7 @@ if __name__ == "__main__":
     select_languages_gui()
     print(f"선택된 언어: {selected_languages}")
 
-    print("[2/6] 블러 영역 선택")
+    print("[2/6] 자막 영역 선택")
     blur_coords = select_blur_region(input_video_path)
 
     print("[3/6] 원문 자막 생성 중...")
