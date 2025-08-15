@@ -1,0 +1,7 @@
+opencv-python
+srt
+numpy
+requests
+Pillow
+openai
+tqdm
