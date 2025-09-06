@@ -1,0 +1,50 @@
+{
+  "current_step": "모든 비디오 처리 완료",
+  "progress": 100,
+  "completed_videos": 4,
+  "processing_videos": 0,
+  "total_videos": 4,
+  "status": "completed",
+  "videos": [
+    {
+      "filename": "그냥 눈물 밖에 나오지 않습니다.mp4",
+      "status": "completed",
+      "progress": 100,
+      "current_task": "완료됨",
+      "languages": {
+        "english": "completed",
+        "thai": "completed"
+      }
+    },
+    {
+      "filename": "손이 없는데 총을 어떻게 쏘냐고?.mp4",
+      "status": "completed",
+      "progress": 100,
+      "current_task": "완료됨",
+      "languages": {
+        "english": "completed",
+        "thai": "completed"
+      }
+    },
+    {
+      "filename": "인생의 주마등을 제대로 느킨 남성.mp4",
+      "status": "completed",
+      "progress": 100,
+      "current_task": "완료됨",
+      "languages": {
+        "english": "completed",
+        "thai": "completed"
+      }
+    },
+    {
+      "filename": "한 때 로보캅이라 불렸던 러시아 경철관.mp4",
+      "status": "completed",
+      "progress": 100,
+      "current_task": "완료됨",
+      "languages": {
+        "english": "completed",
+        "thai": "completed"
+      }
+    }
+  ]
+}

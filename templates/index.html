@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Videos - Video Auto Translator{% endblock %}
+
+{% block content %}
+<div class="step-indicator">
+    <div class="step">
+        <div class="step-circle active">1</div>
+        <span>Upload Videos</span>
+    </div>
+    <div class="step">
+        <div class="step-circle">2</div>
+        <span>Select Languages</span>
+    </div>
+    <div class="step">
+        <div class="step-circle">3</div>
+        <span>Setup Videos</span>
+    </div>
+    <div class="step">
+        <div class="step-circle">4</div>
+        <span>Process</span>
+    </div>
+</div>
+
+<div class="upload-zone" id="uploadZone">
+    <i class="fas fa-cloud-upload-alt"></i>
+    <h3>Choose Files or Drag & Drop</h3>
+    <p>Upload your Korean video files (MP4, AVI, MOV, MKV)</p>
+    <p class="text-muted">Max file size: 1GB per file</p>
+    
+    <input type="file" id="fileInput" multiple accept="video/*" style="display: none;">
+    <button type="button" class="btn btn-primary mt-3" onclick="document.getElementById('fileInput').click()">
+        <i class="fas fa-folder-open"></i> Browse Files
+    </button>
+</div>
+
+<div id="fileList" class="file-list" style="display: none;">
+    <h4><i class="fas fa-list"></i> Uploaded Files</h4>
+    <div id="fileItems"></div>
+</div>
+
+<div class="text-center mt-4" id="startButtonContainer" style="display: none;">
+    <button type="button" class="btn btn-primary btn-lg" id="startButton" disabled>
+        <i class="fas fa-play"></i> Start Processing
+    </button>
+</div>
+
+<!-- Progress Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Uploading Files...</h5>
+            </div>
+            <div class="modal-body">
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <p class="mt-2 mb-0" id="uploadStatus">Preparing upload...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    const uploadZone = $('#uploadZone');
+    const fileInput = $('#fileInput');
+    const fileList = $('#fileList');
+    const fileItems = $('#fileItems');
+    const startButton = $('#startButton');
+    const startButtonContainer = $('#startButtonContainer');
+    
+    let uploadedFiles = [];
+
+    // Drag & Drop handlers
+    uploadZone.on('dragover dragenter', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadZone.addClass('dragover');
+    });
+
+    uploadZone.on('dragleave dragend', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadZone.removeClass('dragover');
+    });
+
+    uploadZone.on('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadZone.removeClass('dragover');
+        
+        const files = Array.from(e.originalEvent.dataTransfer.files);
+        handleFiles(files);
+    });
+
+    // File input change
+    fileInput.on('change', function() {
+        const files = Array.from(this.files);
+        handleFiles(files);
+    });
+
+    // Click to upload
+    uploadZone.on('click', function() {
+        fileInput.click();
+    });
+
+    function handleFiles(files) {
+        // Filter video files
+        const videoFiles = files.filter(file => {
+            return file.type.startsWith('video/') || 
+                   ['mp4', 'avi', 'mov', 'mkv'].includes(file.name.split('.').pop().toLowerCase());
+        });
+
+        if (videoFiles.length === 0) {
+            alert('Please select valid video files (MP4, AVI, MOV, MKV)');
+            return;
+        }
+
+        // Check file sizes
+        const oversized = videoFiles.filter(file => file.size > 1024 * 1024 * 1024); // 1GB
+        if (oversized.length > 0) {
+            alert(`Some files are too large (max 1GB): ${oversized.map(f => f.name).join(', ')}`);
+            return;
+        }
+
+        uploadFiles(videoFiles);
+    }
+
+    function uploadFiles(files) {
+        const formData = new FormData();
+        files.forEach(file => {
+            formData.append('files[]', file);
+        });
+
+        // Show upload modal
+        console.log('Showing upload modal...');
+        $('#uploadModal').modal('show');
+        
+        // 모달 상태 추적
+        $('#uploadModal').on('shown.bs.modal', function() {
+            console.log('Modal is now shown');
+        });
+        
+        $('#uploadModal').on('hidden.bs.modal', function() {
+            console.log('Modal is now hidden');
+        });
+        
+        $.ajax({
+            url: '/upload',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            timeout: 60000, // 60초 타임아웃
+            xhr: function() {
+                const xhr = new window.XMLHttpRequest();
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        $('.progress-bar').css('width', percent + '%');
+                        $('#uploadStatus').text(`Uploading... ${percent}%`);
+                    }
+                });
+                return xhr;
+            },
+            success: function(response) {
+                console.log('Upload success:', response);
+                $('#uploadStatus').text('Upload completed!');
+                
+                setTimeout(function() {
+                    // 강제로 모달 닫기
+                    $('#uploadModal').modal('hide');
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open');
+                    $('body').css('padding-right', '');
+                    
+                    displayUploadedFiles(response.files);
+                    uploadedFiles = response.files;
+                }, 1000); // 1초 후에 모달 닫기
+            },
+            error: function(xhr, status, error) {
+                console.error('Upload error:', xhr, status, error);
+                $('#uploadStatus').text('Upload failed!');
+                
+                setTimeout(function() {
+                    // 강제로 모달 닫기
+                    $('#uploadModal').modal('hide');
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open');
+                    $('body').css('padding-right', '');
+                    
+                    const errorMsg = xhr.responseJSON?.error || `Upload failed: ${error}`;
+                    alert('Upload failed: ' + errorMsg);
+                }, 1000);
+            }
+        });
+    }
+
+    function displayUploadedFiles(files) {
+        fileItems.empty();
+        
+        files.forEach((file, index) => {
+            const sizeStr = formatFileSize(file.size);
+            const fileItem = $(`
+                <div class="file-item">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-video fa-2x text-primary"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${file.original_filename}</h6>
+                            <small class="text-muted">${sizeStr}</small>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `);
+            fileItems.append(fileItem);
+        });
+        
+        fileList.show();
+        startButtonContainer.show();
+        startButton.prop('disabled', false);
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    window.removeFile = function(index) {
+        uploadedFiles.splice(index, 1);
+        if (uploadedFiles.length === 0) {
+            fileList.hide();
+            startButtonContainer.hide();
+        } else {
+            displayUploadedFiles(uploadedFiles);
+        }
+    };
+
+    // Start button click
+    startButton.on('click', function() {
+        if (uploadedFiles.length > 0) {
+            window.location.href = '/select_source_language';
+        }
+    });
+});
+</script>
+{% endblock %}

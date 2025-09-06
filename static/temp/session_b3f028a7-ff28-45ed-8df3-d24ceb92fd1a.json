@@ -1,0 +1,40 @@
+{
+  "uploaded_files": [
+    {
+      "filename": "mp4",
+      "original_filename": "인생의 주마등을 제대로 느킨 남성.mp4",
+      "path": "web_uploads/b3f028a7-ff28-45ed-8df3-d24ceb92fd1a/mp4",
+      "size": 10086180
+    },
+    {
+      "filename": "mp4_1",
+      "original_filename": "한 때 로보캅이라 불렸던 러시아 경철관.mp4",
+      "path": "web_uploads/b3f028a7-ff28-45ed-8df3-d24ceb92fd1a/mp4_1",
+      "size": 16490270
+    }
+  ],
+  "selected_languages": [
+    "english",
+    "thai"
+  ],
+  "video_settings": {
+    "0": {
+      "korean_subtitles": null,
+      "korean_title": null,
+      "subtitle_region": {
+        "height": 0.08754618416289284,
+        "width": 0.9564393939393939,
+        "x": 0.02462121212121212,
+        "y": 0.722170993763789
+      },
+      "timestamp": "2025-09-06T18:37:11.940735",
+      "title_region": {
+        "height": 0.12100823070565495,
+        "width": 0.8087121212121212,
+        "x": 0.0946969696969697,
+        "y": 0.1293962555412116
+      }
+    }
+  },
+  "source_language": "korean"
+}

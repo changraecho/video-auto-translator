@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}Select Source Language - Video Auto Translator{% endblock %}
+
+{% block content %}
+<div class="step-indicator">
+    <div class="step">
+        <div class="step-circle completed">1</div>
+        <span>Upload Videos</span>
+    </div>
+    <div class="step">
+        <div class="step-circle active">2</div>
+        <span>Source Language</span>
+    </div>
+    <div class="step">
+        <div class="step-circle">3</div>
+        <span>Target Languages</span>
+    </div>
+    <div class="step">
+        <div class="step-circle">4</div>
+        <span>Setup Videos</span>
+    </div>
+    <div class="step">
+        <div class="step-circle">5</div>
+        <span>Process</span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <h3><i class="fas fa-microphone"></i> Select Source Language</h3>
+        <p class="text-muted">Choose the language of your uploaded videos. This will be the source language for translation:</p>
+        
+        <div class="language-grid">
+            {% for language in available_languages %}
+            <div class="language-item source-language-item" data-language="{{ language.lower() }}">
+                <input type="radio" id="source_{{ language.lower() }}" name="source_language" value="{{ language.lower() }}">
+                <div class="language-content">
+                    <div class="mb-2 flag-container">
+                        {% if language == 'English' %}
+                            🇺🇸
+                        {% elif language == 'Spanish' %}
+                            🇪🇸
+                        {% elif language == 'Japanese' %}
+                            🇯🇵
+                        {% elif language == 'Chinese' %}
+                            🇨🇳
+                        {% elif language == 'French' %}
+                            🇫🇷
+                        {% elif language == 'German' %}
+                            🇩🇪
+                        {% elif language == 'Vietnamese' %}
+                            🇻🇳
+                        {% elif language == 'Thai' %}
+                            🇹🇭
+                        {% elif language == 'Korean' %}
+                            🇰🇷
+                        {% else %}
+                            🌐
+                        {% endif %}
+                    </div>
+                    <h6>{{ language }}</h6>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="settings-panel">
+            <h5><i class="fas fa-video"></i> Uploaded Videos</h5>
+            <div class="uploaded-files">
+                {% for file in uploaded_files %}
+                <div class="file-item mb-2">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-video me-2 text-primary"></i>
+                        <div>
+                            <div class="fw-bold">{{ file.original_filename }}</div>
+                            <small class="text-muted">{{ "%.1f"|format(file.size / (1024*1024)) }} MB</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="mt-4">
+                <h6><i class="fas fa-info-circle"></i> Selected Source Language</h6>
+                <div id="selectedSourceLanguage" class="text-muted">
+                    No language selected
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <div class="alert alert-info">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    <strong>Tip:</strong> Make sure to select the language that is actually spoken in your videos. This will ensure accurate translation results.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12 text-center">
+        <button type="button" class="btn btn-secondary me-2" onclick="window.history.back()">
+            <i class="fas fa-arrow-left"></i> Back
+        </button>
+        <button type="button" class="btn btn-primary" id="nextButton" disabled>
+            Next <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .source-language-item {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .source-language-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
+    }
+    
+    .source-language-item.selected {
+        border-color: #4f46e5;
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
+    }
+    
+    .source-language-item.selected::before {
+        content: '✓';
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #4f46e5;
+        color: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: bold;
+    }
+    
+    .source-language-item input[type="radio"] {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    const languageItems = $('.source-language-item');
+    const nextButton = $('#nextButton');
+    const selectedLanguageDiv = $('#selectedSourceLanguage');
+    let selectedSourceLanguage = null;
+
+    // Source language selection handler
+    languageItems.on('click', function() {
+        const language = $(this).data('language');
+        const radio = $(this).find('input[type="radio"]');
+        
+        // Remove selection from all items
+        languageItems.removeClass('selected');
+        $('input[name="source_language"]').prop('checked', false);
+        
+        // Select this item
+        $(this).addClass('selected');
+        radio.prop('checked', true);
+        selectedSourceLanguage = language;
+        
+        updateSelectedDisplay();
+        updateNextButton();
+    });
+
+    function updateSelectedDisplay() {
+        if (selectedSourceLanguage) {
+            const languageName = selectedSourceLanguage.charAt(0).toUpperCase() + selectedSourceLanguage.slice(1);
+            selectedLanguageDiv.html(`<span class="text-success fw-bold">${languageName}</span>`);
+        } else {
+            selectedLanguageDiv.html('<span class="text-muted">No language selected</span>');
+        }
+    }
+
+    function updateNextButton() {
+        nextButton.prop('disabled', !selectedSourceLanguage);
+    }
+
+    // Next button handler
+    nextButton.on('click', function() {
+        if (!selectedSourceLanguage) {
+            alert('Please select a source language');
+            return;
+        }
+
+        // Save selected source language
+        $.ajax({
+            url: '/save_source_language',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                source_language: selectedSourceLanguage
+            }),
+            success: function(response) {
+                // Redirect to target languages selection
+                window.location.href = '/select_target_languages';
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON?.error || 'Failed to save source language';
+                alert('Error: ' + error);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

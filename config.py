@@ -76,4 +76,4 @@ FONTS = TITLE_FONTS
 FONT_PATH = FONTS["default"]
 
 # === 번역 언어 목록 ===
-AVAILABLE_LANGUAGES = ["English", "Spanish", "Vietnamese", "Japanese", "Chinese", "French", "German", "Thai"]
+AVAILABLE_LANGUAGES = ["Korean", "English", "Spanish", "Vietnamese", "Japanese", "Chinese", "French", "German", "Thai"]

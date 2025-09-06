@@ -1,0 +1,8 @@
+{
+  "current_step": "모든 비디오 처리 완료",
+  "progress": 100,
+  "completed_videos": 0,
+  "total_videos": 0,
+  "status": "completed",
+  "videos": []
+}

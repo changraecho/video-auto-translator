@@ -1,0 +1,622 @@
+{% extends "base.html" %}
+
+{% block title %}Setup Video {{ video_index + 1 }} - Video Auto Translator{% endblock %}
+
+{% block content %}
+<div class="step-indicator">
+    <div class="step">
+        <div class="step-circle completed">1</div>
+        <span>Upload Videos</span>
+    </div>
+    <div class="step">
+        <div class="step-circle completed">2</div>
+        <span>Select Languages</span>
+    </div>
+    <div class="step">
+        <div class="step-circle active">3</div>
+        <span>Setup Videos</span>
+    </div>
+    <div class="step">
+        <div class="step-circle">4</div>
+        <span>Process</span>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h3><i class="fas fa-cog"></i> Video Setup ({{ video_index + 1 }}/{{ total_videos }})</h3>
+                <div class="video-filename-display">
+                    <i class="fas fa-video text-primary me-2"></i>
+                    <span class="fs-4 fw-bold text-primary">{{ current_file.original_filename }}</span>
+                </div>
+            </div>
+            <div class="btn-group">
+                {% if video_index > 0 %}
+                <a href="/setup_video/{{ video_index - 1 }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Previous
+                </a>
+                {% endif %}
+                {% if video_index < total_videos - 1 %}
+                <a href="/setup_video/{{ video_index + 1 }}" class="btn btn-secondary" id="nextVideoBtn" style="display: none;">
+                    Next <i class="fas fa-arrow-right"></i>
+                </a>
+                {% else %}
+                <a href="/process_videos" class="btn btn-success" id="processBtn" style="display: none;">
+                    <i class="fas fa-play"></i> Start Processing
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="video-setup">
+    <div class="video-preview">
+        <div class="mb-3">
+            <div class="btn-group w-100 mb-2">
+                <button type="button" class="btn btn-outline-success" id="toggleVideoPlayer">
+                    <i class="fas fa-play"></i> Play Video
+                </button>
+                <button type="button" class="btn btn-outline-danger" id="setTitleRegion">
+                    <i class="fas fa-plus"></i> Set Title Region
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="setSubtitleRegion">
+                    <i class="fas fa-plus"></i> Set Subtitle Region
+                </button>
+            </div>
+            <div class="text-center mb-2">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> 
+                    Click buttons above to define regions, then drag to position and resize as needed
+                </small>
+            </div>
+        </div>
+        
+        <div id="videoContainer" class="position-relative">
+            <!-- Video Player -->
+            <video id="videoPlayer" src="/video_preview/{{ video_index }}" controls class="img-fluid" style="width: 100%; height: auto; display: none;">
+                Your browser does not support the video tag.
+            </video>
+            
+            <!-- Thumbnail (fallback) -->
+            <img id="videoThumbnail" src="{{ thumbnail_url }}" alt="Video thumbnail" class="img-fluid" style="cursor: pointer;">
+            
+            <!-- Region overlays -->
+            <div class="region-overlay">
+                <div id="titleRegion" class="region-box title-region" style="display: none;">
+                    <div class="region-label">Title Region</div>
+                    <div class="resize-handles">
+                        <div class="resize-handle nw"></div>
+                        <div class="resize-handle ne"></div>
+                        <div class="resize-handle sw"></div>
+                        <div class="resize-handle se"></div>
+                    </div>
+                </div>
+                
+                <div id="subtitleRegion" class="region-box subtitle-region" style="display: none;">
+                    <div class="region-label">Subtitle Region</div>
+                    <div class="resize-handles">
+                        <div class="resize-handle nw"></div>
+                        <div class="resize-handle ne"></div>
+                        <div class="resize-handle sw"></div>
+                        <div class="resize-handle se"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="settings-panel">
+        <h5><i class="fas fa-edit"></i> Video Content</h5>
+        
+        <div class="mb-4">
+            <label for="sourceTitle" class="form-label">
+                <i class="fas fa-heading"></i> {{ source_language.title() }} Title
+            </label>
+            <input type="text" class="form-control" id="sourceTitle" placeholder="Enter {{ source_language.lower() }} title for this video">
+            <small class="text-muted">
+                <i class="fas fa-info-circle"></i> 
+                {% if source_language.lower() == 'korean' %}
+                    제목은 한국어로 작성해주세요. 선택한 언어들로 번역됩니다.
+                {% elif source_language.lower() == 'english' %}
+                    Please write the title in English. It will be translated to the selected languages.
+                {% elif source_language.lower() == 'japanese' %}
+                    タイトルは日本語で書いてください。選択した言語に翻訳されます。
+                {% elif source_language.lower() == 'chinese' %}
+                    请用中文写标题。它将被翻译成所选语言。
+                {% elif source_language.lower() == 'spanish' %}
+                    Por favor, escriba el título en español. Será traducido a los idiomas seleccionados.
+                {% elif source_language.lower() == 'french' %}
+                    Veuillez écrire le titre en français. Il sera traduit dans les langues sélectionnées.
+                {% elif source_language.lower() == 'german' %}
+                    Bitte schreiben Sie den Titel auf Deutsch. Es wird in die ausgewählten Sprachen übersetzt.
+                {% elif source_language.lower() == 'vietnamese' %}
+                    Vui lòng viết tiêu đề bằng tiếng Việt. Nó sẽ được dịch sang các ngôn ngữ đã chọn.
+                {% elif source_language.lower() == 'thai' %}
+                    โปรดเขียนชื่อเรื่องเป็นภาษาไทย มันจะถูกแปลเป็นภาษาที่เลือก
+                {% else %}
+                    Please write the title in {{ source_language.title() }}. It will be translated to the selected languages.
+                {% endif %}
+            </small>
+        </div>
+        
+        <div class="mb-4">
+            <label for="sourceSubtitles" class="form-label">
+                <i class="fas fa-comments"></i> {{ source_language.title() }} Dialogue
+                <button type="button" class="btn btn-sm btn-outline-primary ms-2" id="extractAudioBtn">
+                    <i class="fas fa-microphone"></i> Extract from Audio
+                </button>
+            </label>
+            <textarea class="form-control" id="sourceSubtitles" rows="10" placeholder="{{ source_language.title() }} dialogue will appear here after audio extraction, or you can type manually"></textarea>
+            <small class="text-muted">Edit the extracted text as needed</small>
+        </div>
+        
+        <div class="mb-4">
+            <h6><i class="fas fa-language"></i> Translation</h6>
+            <div class="translation-info">
+                <div class="mb-2">
+                    <small class="text-muted">From:</small>
+                    <span class="badge bg-success">{{ source_language.title() }}</span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">To:</small>
+                    <div class="target-languages">
+                        {% for language in selected_languages %}
+                        <span class="badge bg-primary me-1">{{ language.title() }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <h6><i class="fas fa-info-circle"></i> Region Status</h6>
+            <div class="region-status">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fas fa-square text-danger me-2"></i>
+                    <span>Title Region: <span id="titleStatus" class="text-muted">Not set</span></span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-square text-primary me-2"></i>
+                    <span>Subtitle Region: <span id="subtitleStatus" class="text-muted">Not set</span></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-grid">
+            <button type="button" class="btn btn-primary" id="saveSettingsBtn" disabled>
+                <i class="fas fa-save"></i> Save Settings
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Audio Extraction Modal -->
+<div class="modal fade" id="audioExtractionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-microphone"></i> Extracting Audio...
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="loading-spinner mb-3"></div>
+                <p>Processing audio with Whisper AI...</p>
+                <p class="text-muted">This may take a few minutes depending on video length</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .region-box {
+        min-width: 100px;
+        min-height: 50px;
+        cursor: move;
+        border-width: 2px;
+        border-style: dashed;
+    }
+    
+    .region-label {
+        position: absolute;
+        top: -25px;
+        left: 0;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .resize-handles {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+    
+    .resize-handle {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        background: white;
+        border: 2px solid #333;
+        border-radius: 50%;
+    }
+    
+    .resize-handle.nw { top: -4px; left: -4px; cursor: nw-resize; }
+    .resize-handle.ne { top: -4px; right: -4px; cursor: ne-resize; }
+    .resize-handle.sw { bottom: -4px; left: -4px; cursor: sw-resize; }
+    .resize-handle.se { bottom: -4px; right: -4px; cursor: se-resize; }
+    
+    .target-languages {
+        padding: 10px;
+        background: #f8fafc;
+        border-radius: 8px;
+    }
+    
+    .region-status {
+        padding: 10px;
+        background: #f8fafc;
+        border-radius: 8px;
+    }
+    
+    #videoContainer {
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    #videoThumbnail, #videoPlayer {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+    
+    .video-controls {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.7);
+        padding: 10px;
+        border-radius: 25px;
+        display: none;
+    }
+    
+    .video-controls button {
+        background: transparent;
+        border: none;
+        color: white;
+        margin: 0 5px;
+        padding: 8px 12px;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+    
+    .video-controls button:hover {
+        background: rgba(255,255,255,0.2);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let titleRegionSet = false;
+    let subtitleRegionSet = false;
+    let isDragging = false;
+    let isResizing = false;
+    let currentRegion = null;
+    let videoPlaying = false;
+    
+    const videoContainer = $('#videoContainer');
+    const videoPlayer = $('#videoPlayer');
+    const videoThumbnail = $('#videoThumbnail');
+    const titleRegion = $('#titleRegion');
+    const subtitleRegion = $('#subtitleRegion');
+    const saveBtn = $('#saveSettingsBtn');
+    
+    // Video player toggle
+    $('#toggleVideoPlayer').click(function() {
+        if (!videoPlaying) {
+            // Switch to video
+            videoThumbnail.hide();
+            videoPlayer.show();
+            videoPlayer[0].play();
+            videoPlaying = true;
+            $(this).html('<i class="fas fa-image"></i> Show Thumbnail');
+            $(this).removeClass('btn-outline-success').addClass('btn-outline-secondary');
+        } else {
+            // Switch back to thumbnail
+            videoPlayer[0].pause();
+            videoPlayer.hide();
+            videoThumbnail.show();
+            videoPlaying = false;
+            $(this).html('<i class="fas fa-play"></i> Play Video');
+            $(this).removeClass('btn-outline-secondary').addClass('btn-outline-success');
+        }
+    });
+    
+    // Thumbnail click to play video
+    videoThumbnail.click(function() {
+        $('#toggleVideoPlayer').click();
+    });
+    
+    // Video ended event
+    videoPlayer[0].addEventListener('ended', function() {
+        $('#toggleVideoPlayer').click();
+    });
+    
+    // Region creation buttons
+    $('#setTitleRegion').click(function() {
+        createRegion('title');
+    });
+    
+    $('#setSubtitleRegion').click(function() {
+        createRegion('subtitle');
+    });
+    
+    function createRegion(type) {
+        const container = videoContainer[0].getBoundingClientRect();
+        const region = type === 'title' ? titleRegion : subtitleRegion;
+        
+        // Default position and size
+        const width = Math.min(300, container.width * 0.6);
+        const height = 80;
+        const left = (container.width - width) / 2;
+        const top = type === 'title' ? 50 : container.height - height - 50;
+        
+        region.css({
+            display: 'block',
+            left: left + 'px',
+            top: top + 'px',
+            width: width + 'px',
+            height: height + 'px'
+        });
+        
+        if (type === 'title') {
+            titleRegionSet = true;
+            $('#titleStatus').text('Set').removeClass('text-muted').addClass('text-success');
+        } else {
+            subtitleRegionSet = true;
+            $('#subtitleStatus').text('Set').removeClass('text-muted').addClass('text-success');
+        }
+        
+        updateSaveButton();
+        makeRegionInteractive(region);
+    }
+    
+    function makeRegionInteractive(region) {
+        // Make draggable
+        region.on('mousedown', function(e) {
+            if ($(e.target).hasClass('resize-handle')) return;
+            
+            isDragging = true;
+            currentRegion = $(this);
+            
+            const rect = currentRegion[0].getBoundingClientRect();
+            const containerRect = videoContainer[0].getBoundingClientRect();
+            
+            const offsetX = e.clientX - rect.left;
+            const offsetY = e.clientY - rect.top;
+            
+            $(document).on('mousemove.drag', function(e) {
+                if (!isDragging) return;
+                
+                const newLeft = e.clientX - containerRect.left - offsetX;
+                const newTop = e.clientY - containerRect.top - offsetY;
+                
+                currentRegion.css({
+                    left: Math.max(0, Math.min(newLeft, containerRect.width - currentRegion.outerWidth())),
+                    top: Math.max(0, Math.min(newTop, containerRect.height - currentRegion.outerHeight()))
+                });
+            });
+            
+            $(document).on('mouseup.drag', function() {
+                isDragging = false;
+                currentRegion = null;
+                $(document).off('.drag');
+            });
+        });
+        
+        // Make resizable
+        region.find('.resize-handle').on('mousedown', function(e) {
+            e.stopPropagation();
+            isResizing = true;
+            currentRegion = region;
+            
+            const handle = $(this);
+            const handleClass = handle.attr('class').split(' ').find(cls => ['nw', 'ne', 'sw', 'se'].includes(cls));
+            
+            const startRect = currentRegion[0].getBoundingClientRect();
+            const containerRect = videoContainer[0].getBoundingClientRect();
+            
+            $(document).on('mousemove.resize', function(e) {
+                if (!isResizing) return;
+                
+                const deltaX = e.clientX - startRect.left;
+                const deltaY = e.clientY - startRect.top;
+                
+                let newLeft = parseInt(currentRegion.css('left'));
+                let newTop = parseInt(currentRegion.css('top'));
+                let newWidth = currentRegion.outerWidth();
+                let newHeight = currentRegion.outerHeight();
+                
+                switch(handleClass) {
+                    case 'se':
+                        newWidth = Math.max(100, deltaX);
+                        newHeight = Math.max(50, deltaY);
+                        break;
+                    case 'sw':
+                        newWidth = Math.max(100, startRect.width - deltaX);
+                        newHeight = Math.max(50, deltaY);
+                        newLeft = Math.max(0, startRect.left - containerRect.left + deltaX);
+                        break;
+                    case 'ne':
+                        newWidth = Math.max(100, deltaX);
+                        newHeight = Math.max(50, startRect.height - deltaY);
+                        newTop = Math.max(0, startRect.top - containerRect.top + deltaY);
+                        break;
+                    case 'nw':
+                        newWidth = Math.max(100, startRect.width - deltaX);
+                        newHeight = Math.max(50, startRect.height - deltaY);
+                        newLeft = Math.max(0, startRect.left - containerRect.left + deltaX);
+                        newTop = Math.max(0, startRect.top - containerRect.top + deltaY);
+                        break;
+                }
+                
+                currentRegion.css({
+                    left: newLeft,
+                    top: newTop,
+                    width: newWidth,
+                    height: newHeight
+                });
+            });
+            
+            $(document).on('mouseup.resize', function() {
+                isResizing = false;
+                currentRegion = null;
+                $(document).off('.resize');
+            });
+        });
+    }
+    
+    // Audio extraction
+    $('#extractAudioBtn').click(function() {
+        console.log('Starting audio extraction...');
+        $('#audioExtractionModal').modal('show');
+        
+        $.ajax({
+            url: '/extract_audio',
+            method: 'POST',
+            contentType: 'application/json',
+            timeout: 120000, // 2분 타임아웃
+            data: JSON.stringify({
+                video_index: {{ video_index }}
+            }),
+            success: function(response) {
+                console.log('Audio extraction success:', response);
+                
+                setTimeout(function() {
+                    $('#audioExtractionModal').modal('hide');
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open');
+                    $('body').css('padding-right', '');
+                    
+                    $('#sourceSubtitles').val(response.extracted_text);
+                    
+                    // 성공 메시지
+                    const alert = $('<div class="alert alert-success alert-dismissible fade show mt-3" role="alert">' +
+                        '<i class="fas fa-check-circle me-2"></i>음성 추출이 완료되었습니다!' +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                        '</div>');
+                    $('#sourceSubtitles').after(alert);
+                    
+                    setTimeout(function() {
+                        alert.remove();
+                    }, 5000);
+                }, 500);
+            },
+            error: function(xhr, status, error) {
+                console.error('Audio extraction error:', xhr, status, error);
+                
+                setTimeout(function() {
+                    $('#audioExtractionModal').modal('hide');
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open');
+                    $('body').css('padding-right', '');
+                    
+                    let errorMsg = 'Audio extraction failed';
+                    
+                    if (status === 'timeout') {
+                        errorMsg = '음성 추출 시간이 초과되었습니다. 더 짧은 비디오로 다시 시도해주세요.';
+                    } else if (xhr.responseJSON?.error) {
+                        errorMsg = xhr.responseJSON.error;
+                    }
+                    
+                    alert('Error: ' + errorMsg);
+                }, 500);
+            }
+        });
+    });
+    
+    // Save settings
+    $('#saveSettingsBtn').click(function() {
+        const containerRect = videoContainer[0].getBoundingClientRect();
+        
+        // Get region coordinates as percentages
+        const titleRegionData = titleRegionSet ? {
+            x: parseInt(titleRegion.css('left')) / containerRect.width,
+            y: parseInt(titleRegion.css('top')) / containerRect.height,
+            width: titleRegion.outerWidth() / containerRect.width,
+            height: titleRegion.outerHeight() / containerRect.height
+        } : null;
+        
+        const subtitleRegionData = subtitleRegionSet ? {
+            x: parseInt(subtitleRegion.css('left')) / containerRect.width,
+            y: parseInt(subtitleRegion.css('top')) / containerRect.height,
+            width: subtitleRegion.outerWidth() / containerRect.width,
+            height: subtitleRegion.outerHeight() / containerRect.height
+        } : null;
+        
+        const settings = {
+            video_index: {{ video_index }},
+            title_region: titleRegionData,
+            subtitle_region: subtitleRegionData,
+            source_title: $('#sourceTitle').val(),
+            source_subtitles: $('#sourceSubtitles').val(),
+            source_language: '{{ source_language }}'
+        };
+        
+        $.ajax({
+            url: '/save_video_settings',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(settings),
+            success: function(response) {
+                // Show success feedback
+                saveBtn.html('<i class="fas fa-check"></i> Saved!');
+                
+                // 자동으로 다음 영상으로 이동 또는 처리 페이지로 이동
+                setTimeout(function() {
+                    {% if video_index < total_videos - 1 %}
+                        // 다음 영상이 있으면 자동으로 이동
+                        window.location.href = '/setup_video/{{ video_index + 1 }}';
+                    {% else %}
+                        // 마지막 영상이면 처리 페이지로 이동
+                        window.location.href = '/process_videos';
+                    {% endif %}
+                }, 1500); // 1.5초 후 자동 이동
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON?.error || 'Failed to save settings';
+                alert('Error: ' + error);
+            }
+        });
+    });
+    
+    function updateSaveButton() {
+        const titleSet = $('#sourceTitle').val().trim() !== '';
+        const hasRequiredRegions = titleRegionSet || subtitleRegionSet;
+        
+        saveBtn.prop('disabled', !titleSet || !hasRequiredRegions);
+    }
+    
+    // Update save button when title changes
+    $('#sourceTitle').on('input', updateSaveButton);
+    
+    // Prevent context menu on regions
+    $('.region-box').on('contextmenu', function(e) {
+        e.preventDefault();
+    });
+});
+</script>
+{% endblock %}

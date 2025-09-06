@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+
+{% block title %}Processing Videos - Video Auto Translator{% endblock %}
+
+{% block content %}
+<div class="step-indicator">
+    <div class="step">
+        <div class="step-circle completed">1</div>
+        <span>Upload Videos</span>
+    </div>
+    <div class="step">
+        <div class="step-circle completed">2</div>
+        <span>Select Languages</span>
+    </div>
+    <div class="step">
+        <div class="step-circle completed">3</div>
+        <span>Setup Videos</span>
+    </div>
+    <div class="step">
+        <div class="step-circle active">4</div>
+        <span>Process</span>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <h3><i class="fas fa-cogs"></i> Processing Videos</h3>
+        <p class="text-muted">Your videos are being processed with AI translation</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="processing-panel">
+            <div class="overall-progress mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5><i class="fas fa-tasks"></i> Overall Progress</h5>
+                    <span id="overallPercent" class="badge bg-primary">0%</span>
+                </div>
+                <div class="progress mb-2">
+                    <div id="overallProgress" class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%"></div>
+                </div>
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="stat-item">
+                            <div class="stat-value" id="completedVideos">0</div>
+                            <div class="stat-label">Completed</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-item">
+                            <div class="stat-value" id="processingVideos">0</div>
+                            <div class="stat-label">Processing</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ uploaded_files|length }}</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="current-task mb-4">
+                <h6><i class="fas fa-spinner fa-spin"></i> Current Task</h6>
+                <div class="task-description" id="currentTask">
+                    Preparing to process videos...
+                </div>
+            </div>
+            
+            <div class="video-list">
+                <h6><i class="fas fa-list"></i> Video Status</h6>
+                {% for file in uploaded_files %}
+                <div class="video-item" data-video-index="{{ loop.index0 }}">
+                    <div class="d-flex align-items-center">
+                        <div class="video-status me-3">
+                            <i class="fas fa-clock text-muted" id="status-{{ loop.index0 }}"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">{{ file.original_filename }}</div>
+                            <div class="task-details" id="details-{{ loop.index0 }}">Waiting to start...</div>
+                        </div>
+                        <div class="languages-progress me-3">
+                            {% for language in selected_languages %}
+                            <span class="language-badge" data-video="{{ loop.index0 }}" data-language="{{ language }}">
+                                {{ language[:2].upper() }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        <div class="video-actions">
+                            <div class="dropdown" style="display: none;" id="download-dropdown-{{ loop.index0 }}">
+                                <button class="btn btn-sm btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-download"></i> Download
+                                </button>
+                                <ul class="dropdown-menu">
+                                    {% for language in selected_languages %}
+                                    <li>
+                                        <a class="dropdown-item download-link" 
+                                           href="#" 
+                                           data-video="{{ loop.index0 }}" 
+                                           data-language="{{ language }}">
+                                            <i class="flag-icon"></i> {{ language.title() }}
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item download-all-link" 
+                                           href="#" 
+                                           data-video="{{ loop.index0 }}">
+                                            <i class="fas fa-archive"></i> All Languages
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="video-progress mt-2">
+                        <div class="progress" style="height: 4px;">
+                            <div class="progress-bar" id="progress-{{ loop.index0 }}" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <button type="button" class="btn btn-primary btn-lg" id="startProcessingBtn">
+                <i class="fas fa-play"></i> Start Processing
+            </button>
+            
+            <div id="processingActions" style="display: none;">
+                <button type="button" class="btn btn-secondary" id="pauseBtn" disabled>
+                    <i class="fas fa-pause"></i> Pause
+                </button>
+                <button type="button" class="btn btn-outline-danger ms-2" id="cancelBtn" disabled>
+                    <i class="fas fa-stop"></i> Cancel
+                </button>
+            </div>
+            
+            <div id="completedActions" style="display: none;">
+                <a href="/download_all" class="btn btn-success btn-lg me-2">
+                    <i class="fas fa-download"></i> Download All Files
+                </a>
+                <button type="button" class="btn btn-primary" onclick="window.location.href='/'">
+                    <i class="fas fa-plus"></i> Process More Videos
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i> Processing Error
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="errorMessage">An error occurred during processing.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="retryBtn">
+                    <i class="fas fa-retry"></i> Retry
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .processing-panel {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #4f46e5;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .current-task {
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 1rem;
+        border-left: 4px solid #4f46e5;
+    }
+    
+    .task-description {
+        font-weight: 500;
+        color: #4f46e5;
+    }
+    
+    .video-item {
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .video-status i.fa-clock { color: #6b7280; }
+    .video-status i.fa-spinner { color: #f59e0b; }
+    .video-status i.fa-check { color: #10b981; }
+    .video-status i.fa-exclamation-triangle { color: #ef4444; }
+    
+    .task-details {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+    
+    .languages-progress {
+        display: flex;
+        gap: 0.25rem;
+    }
+    
+    .language-badge {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        text-align: center;
+        border-radius: 50%;
+        font-size: 0.75rem;
+        font-weight: bold;
+        background: #e5e7eb;
+        color: #6b7280;
+    }
+    
+    .language-badge.processing {
+        background: #f59e0b;
+        color: white;
+        animation: pulse 2s infinite;
+    }
+    
+    .language-badge.completed {
+        background: #10b981;
+        color: white;
+    }
+    
+    .language-badge.error {
+        background: #ef4444;
+        color: white;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .overall-progress .progress {
+        height: 20px;
+        border-radius: 10px;
+    }
+    
+    .video-progress .progress {
+        border-radius: 2px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let processingInterval = null;
+    let isProcessing = false;
+    
+    const startBtn = $('#startProcessingBtn');
+    const processingActions = $('#processingActions');
+    const completedActions = $('#completedActions');
+    
+    // Start processing
+    startBtn.click(function() {
+        startProcessing();
+    });
+    
+    function startProcessing() {
+        startBtn.hide();
+        processingActions.show();
+        isProcessing = true;
+        
+        // Start the processing request
+        $.ajax({
+            url: '/start_processing',
+            method: 'POST',
+            success: function(response) {
+                // Start polling for progress
+                startProgressPolling();
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON?.error || 'Failed to start processing';
+                showError(error);
+                resetUI();
+            }
+        });
+    }
+    
+    function startProgressPolling() {
+        processingInterval = setInterval(function() {
+            checkProgress();
+        }, 2000); // Poll every 2 seconds
+        
+        // Initial progress check
+        checkProgress();
+    }
+    
+    function checkProgress() {
+        if (!isProcessing) return;
+        
+        $.ajax({
+            url: '/progress/{{ session.session_id }}',
+            method: 'GET',
+            success: function(data) {
+                updateUI(data);
+                
+                if (data.status === 'completed') {
+                    completedProcessing();
+                } else if (data.status === 'error') {
+                    showError(data.error || 'Processing failed');
+                    resetUI();
+                }
+            },
+            error: function() {
+                // Continue polling on error - might be temporary
+                console.log('Progress polling error, continuing...');
+            }
+        });
+    }
+    
+    function updateUI(data) {
+        // Update overall progress
+        $('#overallProgress').css('width', data.progress + '%');
+        $('#overallPercent').text(data.progress + '%');
+        $('#completedVideos').text(data.completed_videos || 0);
+        $('#processingVideos').text(data.processing_videos || 0);
+        
+        // Update current task
+        $('#currentTask').text(data.current_step || 'Processing...');
+        
+        // Update individual video status
+        if (data.videos) {
+            data.videos.forEach(function(video, index) {
+                updateVideoStatus(index, video);
+            });
+        }
+    }
+    
+    function updateVideoStatus(index, videoData) {
+        const statusIcon = $('#status-' + index);
+        const details = $('#details-' + index);
+        const progress = $('#progress-' + index);
+        
+        // Update status icon
+        statusIcon.removeClass('fa-clock fa-spinner fa-spin fa-check fa-exclamation-triangle text-muted text-warning text-success text-danger');
+        
+        switch(videoData.status) {
+            case 'waiting':
+                statusIcon.addClass('fa-clock text-muted');
+                details.text('Waiting to start...');
+                break;
+            case 'processing':
+                statusIcon.addClass('fa-spinner fa-spin text-warning');
+                details.text(videoData.current_task || 'Processing...');
+                break;
+            case 'completed':
+                statusIcon.addClass('fa-check text-success');
+                details.text('Completed successfully');
+                // Show download button for completed videos
+                $('#download-dropdown-' + index).show();
+                break;
+            case 'error':
+                statusIcon.addClass('fa-exclamation-triangle text-danger');
+                details.text(videoData.error || 'Processing failed');
+                break;
+        }
+        
+        // Update progress bar
+        progress.css('width', (videoData.progress || 0) + '%');
+        
+        // Update language badges
+        if (videoData.languages) {
+            Object.keys(videoData.languages).forEach(function(lang) {
+                const badge = $(`.language-badge[data-video="${index}"][data-language="${lang}"]`);
+                badge.removeClass('processing completed error');
+                badge.addClass(videoData.languages[lang]);
+            });
+        }
+    }
+    
+    function completedProcessing() {
+        clearInterval(processingInterval);
+        isProcessing = false;
+        
+        processingActions.hide();
+        completedActions.show();
+        
+        // Update UI to show completion
+        $('#currentTask').html('<i class="fas fa-check text-success"></i> All videos processed successfully!');
+        
+        // Show success message
+        setTimeout(function() {
+            const alert = $('<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+                '<i class="fas fa-check-circle me-2"></i>' +
+                'All videos have been processed successfully! You can now download the translated versions.' +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                '</div>');
+            $('.processing-panel').prepend(alert);
+        }, 500);
+    }
+    
+    function resetUI() {
+        clearInterval(processingInterval);
+        isProcessing = false;
+        
+        startBtn.show();
+        processingActions.hide();
+        completedActions.hide();
+    }
+    
+    function showError(message) {
+        $('#errorMessage').text(message);
+        $('#errorModal').modal('show');
+    }
+    
+    // Pause/Resume functionality
+    $('#pauseBtn').click(function() {
+        if (isProcessing) {
+            // Pause processing
+            clearInterval(processingInterval);
+            isProcessing = false;
+            $(this).html('<i class="fas fa-play"></i> Resume');
+        } else {
+            // Resume processing
+            isProcessing = true;
+            startProgressPolling();
+            $(this).html('<i class="fas fa-pause"></i> Pause');
+        }
+    });
+    
+    // Cancel processing
+    $('#cancelBtn').click(function() {
+        if (confirm('Are you sure you want to cancel processing? This will stop all current operations.')) {
+            $.ajax({
+                url: '/cancel_processing',
+                method: 'POST',
+                success: function() {
+                    resetUI();
+                    $('#currentTask').text('Processing cancelled');
+                }
+            });
+        }
+    });
+    
+    // Retry on error
+    $('#retryBtn').click(function() {
+        $('#errorModal').modal('hide');
+        startProcessing();
+    });
+    
+    // Individual file download functionality
+    $('.download-link').click(function(e) {
+        e.preventDefault();
+        const videoIndex = $(this).data('video');
+        const language = $(this).data('language');
+        const filename = $(`[data-video-index="${videoIndex}"] .fw-bold`).text();
+        
+        // 개별 파일 다운로드 URL
+        const downloadUrl = `/download_individual/${videoIndex}/${language}`;
+        window.open(downloadUrl, '_blank');
+    });
+    
+    // Download all languages for a specific video
+    $('.download-all-link').click(function(e) {
+        e.preventDefault();
+        const videoIndex = $(this).data('video');
+        
+        // 특정 비디오의 모든 언어 다운로드 URL
+        const downloadUrl = `/download_video_all/${videoIndex}`;
+        window.open(downloadUrl, '_blank');
+    });
+    
+    // Prevent page refresh during processing
+    $(window).on('beforeunload', function(e) {
+        if (isProcessing) {
+            const message = 'Processing is in progress. Are you sure you want to leave?';
+            e.returnValue = message;
+            return message;
+        }
+    });
+});
+</script>
+{% endblock %}

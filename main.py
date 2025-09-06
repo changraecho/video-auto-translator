@@ -717,7 +717,7 @@ def transcribe_video(video_path, output_dir):
 
 
 # === [4] Claude API 번역 ===
-def translate_title_claude(text, target_lang):
+def translate_title_claude(text, target_lang, source_lang="Korean"):
     """타이틀 전용 번역 - 짧고 임팩트 있게"""
     url = "https://api.anthropic.com/v1/messages"
     headers = {
@@ -729,7 +729,7 @@ def translate_title_claude(text, target_lang):
         "model": "claude-3-haiku-20240307",
         "max_tokens": 1000,
         "messages": [
-            {"role": "user", "content": f"Translate this Korean video title to {target_lang}. Make it SHORT, CATCHY and suitable for a video title. Keep it under 6 words if possible. Do NOT transliterate - translate the meaning. Provide only the translated title:\n{text}"}
+            {"role": "user", "content": f"Translate this {source_lang} video title to {target_lang}. Make it SHORT, CATCHY and suitable for a video title. Keep it under 6 words if possible. Do NOT transliterate - translate the meaning. Provide only the translated title:\n{text}"}
         ]
     }
     
@@ -765,9 +765,9 @@ def translate_title_claude(text, target_lang):
         print(f"번역 요청 오류: {e}")
         return f"[번역 실패: {target_lang}] {text}"
 
-def translate_subtitle_claude(text, target_lang):
+def translate_subtitle_claude(text, target_lang, source_lang="Korean"):
     """자막 전용 번역 - 자연스럽고 구어체로"""
-    print(f"  🌍 자막 번역 시작: '{text}' -> {target_lang}")
+    print(f"  🌍 자막 번역 시작: '{text}' ({source_lang} -> {target_lang})")
     
     url = "https://api.anthropic.com/v1/messages"
     headers = {
@@ -779,7 +779,7 @@ def translate_subtitle_claude(text, target_lang):
         "model": "claude-3-haiku-20240307",
         "max_tokens": 1000,
         "messages": [
-            {"role": "user", "content": f"Translate this Korean video subtitle to natural, conversational {target_lang}. Make it sound like how people actually speak in videos - casual and natural. Do NOT transliterate pronunciation - translate the meaning. Provide only the translated subtitle:\n{text}"}
+            {"role": "user", "content": f"Translate this {source_lang} video subtitle to natural, conversational {target_lang}. Make it sound like how people actually speak in videos - casual and natural. Do NOT transliterate pronunciation - translate the meaning. Provide only the translated subtitle:\n{text}"}
         ]
     }
     
@@ -919,14 +919,13 @@ def generate_video(video_path, translations, lang, subtitle_region, output_dir, 
             if title_text:
                 render_title_text(frame, title_text, title_region, lang)
 
-        # 2. 자막 영역 처리 (회색 박스)
+        # 2. 자막 영역 처리 (자막이 있을 때만 회색 박스 표시)
         sx1, sy1, sx2, sy2 = subtitle_region
-        if sy2 > sy1 and sx2 > sx1:  # 올바른 좌표인지 확인
-            # 회색 박스로 덮기 (RGB: 80, 80, 80 - 어두운 회색)
+        
+        # 3. 자막 텍스트 추가 - 텍스트가 있을 때만 박스와 텍스트 모두 표시
+        if current_text and sy2 > sy1 and sx2 > sx1:  # 텍스트가 있고 올바른 좌표인지 확인
+            # 자막이 있을 때만 회색 박스로 덮기 (RGB: 80, 80, 80 - 어두운 회색)
             cv2.rectangle(frame, (sx1, sy1), (sx2, sy2), (80, 80, 80), -1)
-
-        # 3. 자막 텍스트 추가 - OpenCV를 사용하여 직접 렌더링
-        if current_text:
             # 텍스트를 자막 영역 중앙에 배치
             text_x = sx1 + 15
             text_y = sy1 + 60
@@ -966,6 +965,8 @@ def generate_video(video_path, translations, lang, subtitle_region, output_dir, 
                     cv2.putText(frame, line, (text_x, y_pos), cv2.FONT_HERSHEY_DUPLEX, font_scale, (0, 0, 0), outline_thickness)
                     # 흰색 텍스트를 더 두껍게
                     cv2.putText(frame, line, (text_x, y_pos), cv2.FONT_HERSHEY_DUPLEX, font_scale, (255, 255, 255), font_thickness)
+        
+        # 자막이 없는 구간: 자막 박스를 표시하지 않음 (원본 영상 그대로)
 
         out.write(frame)
         frame_idx += 1

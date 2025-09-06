@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Select Languages - Video Auto Translator{% endblock %}
+
+{% block content %}
+<div class="step-indicator">
+    <div class="step">
+        <div class="step-circle completed">1</div>
+        <span>Upload Videos</span>
+    </div>
+    <div class="step">
+        <div class="step-circle active">2</div>
+        <span>Select Languages</span>
+    </div>
+    <div class="step">
+        <div class="step-circle">3</div>
+        <span>Setup Videos</span>
+    </div>
+    <div class="step">
+        <div class="step-circle">4</div>
+        <span>Process</span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <h3><i class="fas fa-language"></i> Select Translation Languages</h3>
+        <p class="text-muted">Choose which languages you want to translate your videos into:</p>
+        
+        <div class="language-grid">
+            {% for language in available_languages %}
+            <div class="language-item" data-language="{{ language.lower() }}">
+                <input type="checkbox" id="lang_{{ language.lower() }}" value="{{ language.lower() }}">
+                <div class="language-content">
+                    <div class="mb-2 flag-container">
+                        {% if language == 'English' %}
+                            🇺🇸
+                        {% elif language == 'Spanish' %}
+                            🇪🇸
+                        {% elif language == 'Japanese' %}
+                            🇯🇵
+                        {% elif language == 'Chinese' %}
+                            🇨🇳
+                        {% elif language == 'French' %}
+                            🇫🇷
+                        {% elif language == 'German' %}
+                            🇩🇪
+                        {% elif language == 'Vietnamese' %}
+                            🇻🇳
+                        {% elif language == 'Thai' %}
+                            🇹🇭
+                        {% elif language == 'Korean' %}
+                            🇰🇷
+                        {% else %}
+                            🌐
+                        {% endif %}
+                    </div>
+                    <h6>{{ language }}</h6>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="settings-panel">
+            <h5><i class="fas fa-video"></i> Uploaded Videos</h5>
+            <div class="uploaded-files">
+                {% for file in uploaded_files %}
+                <div class="file-item mb-2">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-video me-2 text-primary"></i>
+                        <div>
+                            <div class="fw-bold">{{ file.original_filename }}</div>
+                            <small class="text-muted">{{ "%.1f"|format(file.size / (1024*1024)) }} MB</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="mt-4">
+                <h6><i class="fas fa-info-circle"></i> Selected Languages</h6>
+                <div id="selectedLanguages" class="text-muted">
+                    No languages selected
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12 text-center">
+        <button type="button" class="btn btn-secondary me-2" onclick="window.history.back()">
+            <i class="fas fa-arrow-left"></i> Back
+        </button>
+        <button type="button" class="btn btn-primary" id="nextButton" disabled>
+            Next <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    const languageItems = $('.language-item');
+    const nextButton = $('#nextButton');
+    const selectedLanguagesDiv = $('#selectedLanguages');
+    let selectedLanguages = [];
+
+    // Language selection handler
+    languageItems.on('click', function() {
+        const checkbox = $(this).find('input[type="checkbox"]');
+        const language = $(this).data('language');
+        
+        if ($(this).hasClass('selected')) {
+            // Deselect
+            $(this).removeClass('selected');
+            checkbox.prop('checked', false);
+            selectedLanguages = selectedLanguages.filter(lang => lang !== language);
+        } else {
+            // Select
+            $(this).addClass('selected');
+            checkbox.prop('checked', true);
+            selectedLanguages.push(language);
+        }
+        
+        updateSelectedDisplay();
+        updateNextButton();
+    });
+
+    function updateSelectedDisplay() {
+        if (selectedLanguages.length === 0) {
+            selectedLanguagesDiv.html('<span class="text-muted">No languages selected</span>');
+        } else {
+            const languageNames = selectedLanguages.map(lang => 
+                lang.charAt(0).toUpperCase() + lang.slice(1)
+            ).join(', ');
+            selectedLanguagesDiv.html(`<span class="text-success">${languageNames}</span>`);
+        }
+    }
+
+    function updateNextButton() {
+        nextButton.prop('disabled', selectedLanguages.length === 0);
+    }
+
+    // Next button handler
+    nextButton.on('click', function() {
+        if (selectedLanguages.length === 0) {
+            alert('Please select at least one language');
+            return;
+        }
+
+        // Save selected languages
+        $.ajax({
+            url: '/save_languages',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                languages: selectedLanguages
+            }),
+            success: function(response) {
+                // Redirect to first video setup
+                window.location.href = '/setup_video/0';
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON?.error || 'Failed to save languages';
+                alert('Error: ' + error);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
