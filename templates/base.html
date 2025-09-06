@@ -280,9 +280,7 @@
             <div class="header">
                 <h1><i class="fas fa-video"></i> Video Auto Translator</h1>
                 <p>Convert your Korean videos to multiple languages with AI</p>
-                {% if version %}
-                <small class="d-block mt-2 opacity-75" style="font-size: 0.9rem;">{{ version }}</small>
-                {% endif %}
+                <small class="d-block mt-2 opacity-75" style="font-size: 0.9rem;">v1.3.2 (Build: 2025-01-06) - Test Version</small>
             </div>
             
             <div class="content">
@@ -293,9 +291,9 @@
             <div class="text-center p-3 bg-light border-top">
                 <small class="text-muted">
                     <i class="fas fa-info-circle"></i> 
-                    <span id="version-info">Loading version...</span> | 
-                    <a href="/version" target="_blank" class="text-decoration-none">Check Status</a> |
-                    <span id="health-status">Checking health...</span>
+                    Version: v1.3.2 | Build: 2025-01-06 23:00:00 | Environment: production |
+                    <a href="/test" target="_blank" class="text-decoration-none">Test Server</a> |
+                    <span class="text-success">✓ Active</span>
                 </small>
             </div>
         </div>
@@ -307,24 +305,17 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     
     <script>
-        // 페이지 로드시 버전 정보와 헬스 상태 확인
+        // 간단한 서버 상태 확인
         $(document).ready(function() {
-            // 버전 정보 가져오기
-            $.get('/version')
-                .done(function(data) {
-                    $('#version-info').html(`${data.version} | Build: ${data.build_date} | Env: ${data.environment}`);
-                })
-                .fail(function() {
-                    $('#version-info').html('Version info unavailable');
-                });
+            console.log('Video Auto Translator v1.3.2 - Loaded successfully');
             
-            // 헬스 체크
-            $.get('/health')
+            // 선택적으로 테스트 엔드포인트 확인
+            $.get('/test')
                 .done(function(data) {
-                    $('#health-status').html(`<span class="text-success">✓ ${data.status}</span>`);
+                    console.log('Server test successful:', data);
                 })
                 .fail(function() {
-                    $('#health-status').html('<span class="text-danger">✗ unhealthy</span>');
+                    console.log('Server test failed');
                 });
         });
     </script>

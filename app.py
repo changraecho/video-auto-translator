@@ -97,6 +97,11 @@ def index():
     """메인 페이지 - 파일 업로드"""
     return render_template('index.html')
 
+@app.route('/test')
+def test():
+    """간단한 테스트 엔드포인트"""
+    return "Server is working! Version: v1.3.2"
+
 @app.route('/version')
 def version():
     """버전 및 배포 상태 확인 API"""
