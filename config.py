@@ -1,13 +1,23 @@
 # === API 키 설정 ===
-# 로컬 API 키 파일이 있으면 그것을 사용, 없으면 기본값 사용
-try:
-    from config_local import CLAUDE_API_KEY, OPENAI_API_KEY
-    print("✅ 로컬 API 키 파일을 성공적으로 불러왔습니다.")
-except ImportError:
-    # config_local.py가 없는 경우 기본값 (플레이스홀더)
-    CLAUDE_API_KEY = "YOUR_CLAUDE_API_KEY_HERE"
-    OPENAI_API_KEY = "YOUR_OPENAI_API_KEY_HERE"
-    print("⚠️  config_local.py 파일이 없습니다. API 키를 설정해주세요.")
+import os
+
+# 환경변수에서 API 키를 먼저 확인, 없으면 로컬 파일 확인
+CLAUDE_API_KEY = os.getenv('ANTHROPIC_API_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
+if CLAUDE_API_KEY and OPENAI_API_KEY:
+    print("✅ 환경변수에서 API 키를 성공적으로 불러왔습니다.")
+else:
+    try:
+        from config_local import CLAUDE_API_KEY as LOCAL_CLAUDE, OPENAI_API_KEY as LOCAL_OPENAI
+        CLAUDE_API_KEY = CLAUDE_API_KEY or LOCAL_CLAUDE
+        OPENAI_API_KEY = OPENAI_API_KEY or LOCAL_OPENAI
+        print("✅ 로컬 API 키 파일을 성공적으로 불러왔습니다.")
+    except ImportError:
+        # 둘 다 없는 경우 기본값
+        CLAUDE_API_KEY = CLAUDE_API_KEY or "YOUR_CLAUDE_API_KEY_HERE"
+        OPENAI_API_KEY = OPENAI_API_KEY or "YOUR_OPENAI_API_KEY_HERE"
+        print("⚠️  API 키가 설정되지 않았습니다. 환경변수나 config_local.py를 설정해주세요.")
 
 # === 기본 설정 ===
 INPUT_DIR = "input_videos"

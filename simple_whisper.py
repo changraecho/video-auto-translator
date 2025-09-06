@@ -37,12 +37,16 @@ def extract_audio_with_whisper(video_path, output_dir, model_size="tiny"):
         print(f"📥 Loading Whisper {model_size} model...")
         print(f"💾 Available memory check...")
         
-        import psutil
-        memory = psutil.virtual_memory()
-        print(f"🔍 Memory: {memory.available // (1024*1024)} MB available")
-        
-        if memory.available < 500 * 1024 * 1024:  # 500MB 미만
-            print("⚠️ Low memory detected, using tiny model")
+        try:
+            import psutil
+            memory = psutil.virtual_memory()
+            print(f"🔍 Memory: {memory.available // (1024*1024)} MB available")
+            
+            if memory.available < 500 * 1024 * 1024:  # 500MB 미만
+                print("⚠️ Low memory detected, using tiny model")
+                model_size = 'tiny'
+        except ImportError:
+            print("⚠️ psutil not available, using tiny model as safe default")
             model_size = 'tiny'
             
         model = whisper.load_model(model_size)

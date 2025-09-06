@@ -262,13 +262,27 @@ def extract_audio():
     try:
         print("🎤 Audio extraction request received")
         
-        data = request.get_json()
-        video_index = data.get('video_index')
-        print(f"📍 Video index: {video_index}")
+        # 요청 데이터 확인
+        try:
+            data = request.get_json()
+            if not data:
+                print("❌ No JSON data in request")
+                return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+                
+            video_index = data.get('video_index')
+            if video_index is None:
+                print("❌ No video_index in request")
+                return jsonify({'error': 'video_index가 없습니다.'}), 400
+                
+            print(f"📍 Video index: {video_index}")
+        except Exception as json_error:
+            print(f"❌ JSON parsing error: {json_error}")
+            return jsonify({'error': '요청 형식이 잘못되었습니다.'}), 400
         
+        # 세션 확인
         if 'uploaded_files' not in session:
             print("❌ No uploaded files in session")
-            return jsonify({'error': '세션이 만료되었습니다.'}), 400
+            return jsonify({'error': '세션이 만료되었습니다. 페이지를 새로고침하고 다시 시도해주세요.'}), 400
         
         uploaded_files = session['uploaded_files']
         if video_index >= len(uploaded_files):
@@ -298,21 +312,26 @@ def extract_audio():
             print("❌ Whisper module not found")
             return jsonify({'error': 'Whisper가 설치되어 있지 않습니다. pip install openai-whisper로 설치해주세요.'}), 500
         
-        # 실제 Whisper 또는 더미 텍스트 선택
-        use_real_whisper = os.getenv('USE_REAL_WHISPER', 'true').lower() == 'true'  # 기본값을 true로 변경
+        # Render.com 환경에서는 더미 텍스트를 기본으로 사용 (메모리/타임아웃 제한으로 인해)
+        use_real_whisper = os.getenv('USE_REAL_WHISPER', 'false').lower() == 'true'
         
         if use_real_whisper:
             print("🚀 Using real Whisper transcription...")
             try:
                 from simple_whisper import extract_audio_with_whisper, get_text_from_srt
-                
-                # 실제 Whisper 처리
-                srt_path = extract_audio_with_whisper(video_file['path'], temp_output, model_size='tiny')
-                # Claude API로 텍스트 개선
                 from config import CLAUDE_API_KEY
-                extracted_text = get_text_from_srt(srt_path, improve_with_claude=True, claude_api_key=CLAUDE_API_KEY)
                 
-                print(f"✅ Real transcription completed: {len(extracted_text)} characters")
+                # API 키 확인
+                if not CLAUDE_API_KEY or CLAUDE_API_KEY == "YOUR_CLAUDE_API_KEY_HERE":
+                    print("⚠️ Claude API 키가 설정되지 않았습니다. 더미 모드로 전환합니다.")
+                    use_real_whisper = False
+                else:
+                    # 실제 Whisper 처리
+                    srt_path = extract_audio_with_whisper(video_file['path'], temp_output, model_size='tiny')
+                    # Claude API로 텍스트 개선
+                    extracted_text = get_text_from_srt(srt_path, improve_with_claude=True, claude_api_key=CLAUDE_API_KEY)
+                    
+                    print(f"✅ Real transcription completed: {len(extracted_text)} characters")
                 
             except Exception as whisper_error:
                 print(f"❌ Whisper failed: {whisper_error}")
@@ -320,26 +339,33 @@ def extract_audio():
                 import traceback
                 traceback.print_exc()
                 
-                # 사용자에게 에러 정보 반환
-                error_msg = f"Whisper 처리 실패: {str(whisper_error)[:100]}..."
-                print(f"📤 Sending error response: {error_msg}")
-                
-                return jsonify({
-                    'error': error_msg,
-                    'fallback_available': True,
-                    'suggested_action': 'Render.com 무료 플랜의 메모리 제한으로 인해 발생할 수 있습니다. 더미 텍스트를 사용하거나 짧은 동영상으로 시도해보세요.'
-                }), 500
+                # Whisper 실패 시 더미 텍스트로 fallback
+                print("🔄 Falling back to dummy text due to Whisper error")
+                use_real_whisper = False
         
         if not use_real_whisper:
             print("⚡ Using dummy transcription for testing...")
             
-            source_lang = session.get('source_language', 'korean')
+            # 안전한 소스 언어 가져오기
+            try:
+                source_lang = session.get('source_language', 'korean')
+                print(f"📝 Using source language: {source_lang}")
+            except Exception as lang_error:
+                print(f"⚠️ Error getting source language: {lang_error}")
+                source_lang = 'korean'
+            
+            # 안전한 파일명 가져오기
+            try:
+                filename = video_file.get('original_filename', '비디오파일')
+            except Exception as filename_error:
+                print(f"⚠️ Error getting filename: {filename_error}")
+                filename = '비디오파일'
             
             # 언어별 더미 텍스트
             dummy_texts = {
                 'korean': f"""안녕하세요. 이것은 테스트용 더미 자막입니다.
 
-{video_file['original_filename']} 파일에서 추출된 내용처럼 보이게 하기 위한 예시 텍스트입니다.
+{filename} 파일에서 추출된 내용처럼 보이게 하기 위한 예시 텍스트입니다.
 
 실제 Whisper 처리를 원하시면 환경변수를 설정해주세요:
 export USE_REAL_WHISPER=true
@@ -446,7 +472,13 @@ export USE_REAL_WHISPER=true
 หากคุณแก้ไขและบันทึกข้อความนี้ มันจะถูกใช้ในกระบวนการแปล"""
             }
             
-            extracted_text = dummy_texts.get(source_lang, dummy_texts['english'])
+            # 더미 텍스트 선택 (안전한 fallback 포함)
+            try:
+                extracted_text = dummy_texts.get(source_lang, dummy_texts.get('korean', 
+                    "안녕하세요. 테스트용 더미 자막입니다. 실제 Whisper 처리를 위해서는 USE_REAL_WHISPER=true로 설정하세요."))
+            except Exception as text_error:
+                print(f"⚠️ Error getting dummy text: {text_error}")
+                extracted_text = "안녕하세요. 테스트용 더미 자막입니다."
             print(f"✅ Dummy text ({source_lang}) length: {len(extracted_text)} characters")
         
         # TODO: 나중에 실제 Whisper 처리로 교체
