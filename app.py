@@ -23,7 +23,29 @@ from main import (
     render_title_text, render_subtitle_text
 )
 from config import AVAILABLE_LANGUAGES
-from version import get_version_info, get_version_string
+# 버전 정보 (간단하게 직접 정의)
+import os
+from datetime import datetime
+
+def get_version_string():
+    return "v1.3.1 (Build: 2025-01-06)"
+
+def get_version_info():
+    return {
+        'version': '1.3.1',
+        'build_date': '2025-01-06 22:45:00',
+        'git_commit': 'version-fix',
+        'environment': os.getenv('ENVIRONMENT', 'production'),
+        'status': 'active',
+        'features': [
+            'whisper_audio_extraction',
+            'claude_text_improvement', 
+            'multi_language_translation',
+            'dynamic_subtitle_boxes',
+            'srt_timing_sync',
+            'title_font_rendering'
+        ]
+    }
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this'  # 실제 배포시 변경 필요
