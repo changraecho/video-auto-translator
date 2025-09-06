@@ -18,7 +18,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 if '/opt/homebrew/bin' not in os.environ.get('PATH', ''):
     os.environ['PATH'] = '/opt/homebrew/bin:' + os.environ.get('PATH', '')
 
-def extract_audio_with_whisper(video_path, output_dir, model_size="base"):
+def extract_audio_with_whisper(video_path, output_dir, model_size="tiny"):
     """
     Whisper를 사용해 비디오에서 음성을 추출하고 SRT 파일로 저장
     
@@ -35,7 +35,18 @@ def extract_audio_with_whisper(video_path, output_dir, model_size="base"):
     try:
         # Whisper 모델 로드 (처음에는 다운로드 시간이 걸림)
         print(f"📥 Loading Whisper {model_size} model...")
+        print(f"💾 Available memory check...")
+        
+        import psutil
+        memory = psutil.virtual_memory()
+        print(f"🔍 Memory: {memory.available // (1024*1024)} MB available")
+        
+        if memory.available < 500 * 1024 * 1024:  # 500MB 미만
+            print("⚠️ Low memory detected, using tiny model")
+            model_size = 'tiny'
+            
         model = whisper.load_model(model_size)
+        print(f"✅ Model {model_size} loaded successfully")
         
         # 음성 추출
         print(f"🔍 Transcribing: {os.path.basename(video_path)}")
@@ -43,8 +54,11 @@ def extract_audio_with_whisper(video_path, output_dir, model_size="base"):
             video_path,
             language='ko',  # 한국어로 설정
             verbose=True,
-            fp16=False  # CPU 호환성을 위해 False로 설정
+            fp16=False,  # CPU 호환성을 위해 False로 설정
+            task='transcribe',
+            temperature=0.0  # 더 안정적인 결과
         )
+        print(f"🎯 Transcription completed: {len(result.get('segments', []))} segments")
     except FileNotFoundError as e:
         if 'ffmpeg' in str(e):
             print("❌ ffmpeg가 설치되어 있지 않습니다.")

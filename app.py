@@ -307,7 +307,7 @@ def extract_audio():
                 from simple_whisper import extract_audio_with_whisper, get_text_from_srt
                 
                 # 실제 Whisper 처리
-                srt_path = extract_audio_with_whisper(video_file['path'], temp_output, model_size='base')
+                srt_path = extract_audio_with_whisper(video_file['path'], temp_output, model_size='tiny')
                 # Claude API로 텍스트 개선
                 from config import CLAUDE_API_KEY
                 extracted_text = get_text_from_srt(srt_path, improve_with_claude=True, claude_api_key=CLAUDE_API_KEY)
@@ -316,8 +316,19 @@ def extract_audio():
                 
             except Exception as whisper_error:
                 print(f"❌ Whisper failed: {whisper_error}")
-                # Whisper 실패 시 더미 텍스트로 fallback
-                use_real_whisper = False
+                print(f"💡 Error type: {type(whisper_error).__name__}")
+                import traceback
+                traceback.print_exc()
+                
+                # 사용자에게 에러 정보 반환
+                error_msg = f"Whisper 처리 실패: {str(whisper_error)[:100]}..."
+                print(f"📤 Sending error response: {error_msg}")
+                
+                return jsonify({
+                    'error': error_msg,
+                    'fallback_available': True,
+                    'suggested_action': 'Render.com 무료 플랜의 메모리 제한으로 인해 발생할 수 있습니다. 더미 텍스트를 사용하거나 짧은 동영상으로 시도해보세요.'
+                }), 500
         
         if not use_real_whisper:
             print("⚡ Using dummy transcription for testing...")
