@@ -280,10 +280,23 @@
             <div class="header">
                 <h1><i class="fas fa-video"></i> Video Auto Translator</h1>
                 <p>Convert your Korean videos to multiple languages with AI</p>
+                {% if version %}
+                <small class="d-block mt-2 opacity-75" style="font-size: 0.9rem;">{{ version }}</small>
+                {% endif %}
             </div>
             
             <div class="content">
                 {% block content %}{% endblock %}
+            </div>
+            
+            <!-- Version Info Footer -->
+            <div class="text-center p-3 bg-light border-top">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> 
+                    <span id="version-info">Loading version...</span> | 
+                    <a href="/version" target="_blank" class="text-decoration-none">Check Status</a> |
+                    <span id="health-status">Checking health...</span>
+                </small>
             </div>
         </div>
     </div>
@@ -292,6 +305,29 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        // 페이지 로드시 버전 정보와 헬스 상태 확인
+        $(document).ready(function() {
+            // 버전 정보 가져오기
+            $.get('/version')
+                .done(function(data) {
+                    $('#version-info').html(`${data.version} | Build: ${data.build_date} | Env: ${data.environment}`);
+                })
+                .fail(function() {
+                    $('#version-info').html('Version info unavailable');
+                });
+            
+            // 헬스 체크
+            $.get('/health')
+                .done(function(data) {
+                    $('#health-status').html(`<span class="text-success">✓ ${data.status}</span>`);
+                })
+                .fail(function() {
+                    $('#health-status').html('<span class="text-danger">✗ unhealthy</span>');
+                });
+        });
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>

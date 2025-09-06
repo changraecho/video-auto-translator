@@ -23,9 +23,15 @@ from main import (
     render_title_text, render_subtitle_text
 )
 from config import AVAILABLE_LANGUAGES
+from version import get_version_info, get_version_string
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this'  # 실제 배포시 변경 필요
+
+# 모든 템플릿에서 버전 정보 사용 가능하도록 context processor 추가
+@app.context_processor
+def inject_version():
+    return dict(version=get_version_string())
 
 # 업로드 크기 제한 설정
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1GB
@@ -68,6 +74,20 @@ def get_video_thumbnail(video_path, output_path):
 def index():
     """메인 페이지 - 파일 업로드"""
     return render_template('index.html')
+
+@app.route('/version')
+def version():
+    """버전 및 배포 상태 확인 API"""
+    return jsonify(get_version_info())
+
+@app.route('/health')
+def health():
+    """헬스체크 엔드포인트"""
+    return jsonify({
+        'status': 'healthy',
+        'version': get_version_string(),
+        'timestamp': datetime.now().isoformat()
+    })
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
